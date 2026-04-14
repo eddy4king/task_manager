@@ -4,13 +4,10 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive( Debug, Serialize, Deserialize, FromRow)]
-pub struct Task {
+pub struct User {
     pub id: Uuid,
-    pub user_id: Uuid,
-    pub title: String,
-    pub description: Option<String>,
-    pub priority : String,
-    pub status: String,
-    pub due_date: Option<DateTime<Utc>>,
+    pub username: String,
+    pub email: String,
+    pub password_hash: String,
     pub created_at: DateTime<Utc>
 } 
