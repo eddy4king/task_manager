@@ -4,9 +4,10 @@ mod handlers;
 mod state;
 
 use dotenv::dotenv;
-use axum::{routing::get, Router};
-use handlers::health_check;
+use axum::{routing::{get,post}, Router};
+use handlers::{health_check, register};
 use state::AppState;
+
 
 
 
@@ -18,6 +19,7 @@ async fn main() {
 
     let app = Router::new()
             .route("/health", get (health_check))
+            .route("/auth/register", post(register))
             .with_state(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
             .await
