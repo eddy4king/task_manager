@@ -3,3 +3,4 @@ pub mod auth;
 
 pub use health::health_check;
 pub use auth::register;
+pub use auth::login;
