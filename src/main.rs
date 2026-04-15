@@ -2,6 +2,7 @@ mod db;
 mod models;
 mod handlers;
 mod state;
+mod middleware;
 
 use dotenv::dotenv;
 use axum::{routing::{get,post}, Router};
