@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use crate::models::User;
 use crate::state::AppState;
+use crate::errors::AppError;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -14,7 +15,7 @@ pub struct RegisterRequest {
 pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let password_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)
         .expect("Failed to hash password");
 
@@ -26,9 +27,8 @@ pub async fn register(
     password_hash
     )
     .fetch_one(&state.db)
-    .await
-    .expect("Failed to create user");
-    Json(json!({"user": user}))
+    .await?;
+    Ok(Json(json!({"user": user})))
 }
 
 #[derive(Deserialize)]
@@ -46,20 +46,19 @@ pub struct Claims{
 pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let user = sqlx::query_as!(
         User,
         "SELECT * FROM users WHERE email = $1",
         payload.email
     )
     .fetch_one(&state.db)
-    .await
-    .expect("User not found");
+    .await?;
 
     let valid = bcrypt::verify(&payload.password, &user.password_hash)
         .expect("Failed to verify password");
     if !valid {
-        return Json(json!({"error":"Invalid credentials"}));
+        return Err(AppError::Unauthorized);
     }
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     let claims = Claims {
@@ -73,5 +72,5 @@ pub async fn login(
     )
     .expect("Failed to generate token");
 
-    Json(json!({"token": token}))
+     Ok(Json(json!({"token": token})))
 }

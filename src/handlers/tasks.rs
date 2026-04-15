@@ -2,10 +2,11 @@ use axum::{extract::{State, Path}, response::IntoResponse, Json};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
-use crate::models::Task;
+use crate::{errors::AppError, models::Task};
 use crate::state::AppState;
 use crate::middleware::AuthUser;
 use chrono;
+
 
 #[derive(Deserialize)]
 pub struct CreateTaskRequest {
@@ -19,7 +20,7 @@ pub async fn create_task(
     State(state): State<AppState>,
     auth_user: AuthUser,
     Json(payload): Json<CreateTaskRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let task = sqlx::query_as!(
     Task,
     "INSERT INTO tasks (user_id, title, description, priority, status, due_date)
@@ -32,32 +33,30 @@ pub async fn create_task(
     None::<chrono::DateTime<chrono::Utc>>
     )
     .fetch_one(&state.db)
-    .await
-    .expect("Failed to create task");
-    Json(json!({"task": task}))
+    .await?;
+    Ok(Json(json!({"task": task})))
 }
 
 pub async fn get_tasks(
     State(state): State<AppState>,
     auth_user: AuthUser,
-) -> impl IntoResponse {
+) -> Result< impl IntoResponse, AppError> {
     let tasks = sqlx::query_as!(
         Task,
         "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
         auth_user.user_id
     )
     .fetch_all(&state.db)
-    .await
-    .expect("Failed to fetch tasks");
+    .await?;
 
-    Json(json!({"tasks": tasks}))
+    Ok(Json(json!({"tasks": tasks})))
 }
 
 pub async fn get_task(
     State(state): State<AppState>,
     auth_user: AuthUser,
     Path(id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let task = sqlx::query_as!(
         Task,
         "SELECT * FROM tasks WHERE id = $1 AND user_id = $2",
@@ -65,10 +64,9 @@ pub async fn get_task(
         auth_user.user_id
     )
     .fetch_one(&state.db)
-    .await
-    .expect("Task not found");
+    .await?;
 
-    Json(json!({"task": task}))
+    Ok(Json(json!({"task": task})))
 }
 
 #[derive(Deserialize)]
@@ -84,7 +82,7 @@ pub async fn update_task(
     auth_user: AuthUser,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateTaskRequest>,
-) -> impl IntoResponse {
+) -> Result< impl IntoResponse, AppError> {
     let task = sqlx::query_as!(
         Task,
         "UPDATE tasks SET
@@ -102,25 +100,23 @@ pub async fn update_task(
         auth_user.user_id
     )
     .fetch_one(&state.db)
-    .await
-    .expect("Failed to update task");
+    .await?;
 
-    Json(json!({"task": task}))
+    Ok(Json(json!({"task": task})))
 }
 
 pub async fn delete_task(
     State(state): State<AppState>,
     auth_user: AuthUser,
     Path(id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Result< impl IntoResponse, AppError> {
     sqlx::query!(
         "DELETE FROM tasks WHERE id = $1 AND user_id = $2",
         id,
         auth_user.user_id
     )
     .execute(&state.db)
-    .await
-    .expect("Failed to delete task");
+    .await?;
 
-    Json(json!({"message": "Task deleted successfully"}))
+    Ok(Json(json!({"message": "Task deleted successfully"})))
 }
