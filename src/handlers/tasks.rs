@@ -22,7 +22,7 @@ pub async fn create_task(
     auth_user: AuthUser,
     Json(payload): Json<CreateTaskRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    let task = sqlx::query_as!(
+    let task: Task = sqlx::query_as!(
     Task,
     "INSERT INTO tasks (user_id, title, description, priority, status, due_date)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
@@ -42,7 +42,7 @@ pub async fn get_tasks(
     State(state): State<AppState>,
     auth_user: AuthUser,
 ) -> Result< impl IntoResponse, AppError> {
-    let tasks = sqlx::query_as!(
+    let tasks: Vec<Task> = sqlx::query_as!(
         Task,
         "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
         auth_user.user_id
@@ -58,7 +58,7 @@ pub async fn get_task(
     auth_user: AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let task = sqlx::query_as!(
+    let task: Task = sqlx::query_as!(
         Task,
         "SELECT * FROM tasks WHERE id = $1 AND user_id = $2",
         id,
@@ -84,7 +84,7 @@ pub async fn update_task(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateTaskRequest>,
 ) -> Result< impl IntoResponse, AppError> {
-    let task = sqlx::query_as!(
+    let task: Task = sqlx::query_as!(
         Task,
         "UPDATE tasks SET
             title = COALESCE($1, title),
