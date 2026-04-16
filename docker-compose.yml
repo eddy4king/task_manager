@@ -9,6 +9,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/task_manager
+      JWT_SECRET: supersecretkey123
+    depends_on:
+      - db
 
 volumes:
   postgres_data:
