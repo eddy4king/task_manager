@@ -13,6 +13,7 @@ pub struct CreateTaskRequest {
     pub title: String,
     pub description: Option<String>,
     pub priority: Option<String>,
+    #[allow(dead_code)]
     pub due_date: Option<String>,
 }
 

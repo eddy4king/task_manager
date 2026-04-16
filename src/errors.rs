@@ -5,6 +5,7 @@ pub enum AppError {
     DatabaseError(sqlx::Error),
     NotFound,
     Unauthorized,
+    #[allow(dead_code)]
     InternalError,
 }
 
