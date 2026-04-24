@@ -1,4 +1,4 @@
-use axum::{extract::{State, Path}, response::IntoResponse, Json};
+use axum::{extract::{State, Query, Path}, response::IntoResponse, Json};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
@@ -41,16 +41,36 @@ pub async fn create_task(
 pub async fn get_tasks(
     State(state): State<AppState>,
     auth_user: AuthUser,
+    Query(params): Query<TaskQuery>,
 ) -> Result< impl IntoResponse, AppError> {
+    let page = params.page.unwrap_or(1) as i64;
+    let per_page = params.per_page.unwrap_or(10) as i64;
+    let offset = (page - 1) * per_page;
+
+     // DEBUG - remove after testing
+    /*println!("priority filter: {:?}", params.priority);
+    println!("status filter: {:?}", params.status);
+    println!("page: {}, per_page: {}, offset: {}", page, per_page, offset);*/
+
     let tasks: Vec<Task> = sqlx::query_as!(
         Task,
-        "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
-        auth_user.user_id
+        "SELECT * FROM tasks 
+        WHERE user_id = $1
+        AND (CAST($2 AS TEXT) IS NULL OR status = $2)
+        AND (CAST($3 AS TEXT) IS NULL OR priority = $3)
+        ORDER BY created_at DESC
+        LIMIT $4 OFFSET $5",
+        auth_user.user_id,
+        params.status.as_deref(),
+        params.priority.as_deref(),
+        per_page,
+        offset
+        
     )
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(json!({"tasks": tasks})))
+    Ok(Json(json!({"tasks": tasks, "page": page, "per_page": per_page})))
 }
 
 pub async fn get_task(
@@ -76,6 +96,14 @@ pub struct UpdateTaskRequest {
     pub description: Option<String>,
     pub priority: Option<String>,
     pub status: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct TaskQuery{
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
 }
 
 pub async fn update_task(
@@ -121,3 +149,4 @@ pub async fn delete_task(
 
     Ok(Json(json!({"message": "Task deleted successfully"})))
 }
+
